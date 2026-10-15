@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/*
+  Cinematic dark theme. The site is image-forward, so the UI stays out of the way:
+  near-black ground, low-chroma neutrals, one warm accent used sparingly.
+*/
+@theme {
+  --color-ink: #050505;
+  --color-surface: #0c0c0d;
+  --color-surface-raised: #141416;
+  --color-line: #26262a;
+  --color-line-bright: #3a3a40;
+
+  --color-fg: #f2f2f0;
+  --color-fg-muted: #a1a1a6;
+  --color-fg-subtle: #6b6b70;
+
+  --color-accent: #c8a882;
+  --color-accent-bright: #e0c9a6;
+
+  /*
+    Registering the next/font variable here is what makes `font-sans` and `font-display`
+    resolve to Inter. The next/font side deliberately uses a different variable name
+    (--font-body) so this definition isn't self-referential. `font-display` is kept as its
+    own token so headings can be restyled in one place, but it is the same plain sans.
+  */
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Keyboard focus stays visible; mouse focus doesn't clutter the imagery. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+
+/* Thin dark scrollbar so it doesn't cut a bright stripe beside full-bleed photos. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-bright) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-bright);
+  border-radius: 999px;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+  Ken Burns: a very slow push-in on the hero still. Deliberately understated — 6% over half a
+  minute reads as the frame breathing, where anything faster reads as a slideshow effect.
+*/
+@keyframes ken-burns {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.06) translate3d(0, -1%, 0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 1.2s ease both;
+}
+
+.animate-ken-burns {
+  animation:
+    fade-in 1.4s ease both,
+    ken-burns 30s ease-out both;
+}
+
+/*
+  Lightbox image transition: a soft settle-into-place rather than a hard cut. Keyed to the
+  active image's id, so every navigation — next, previous, or jumping straight to a thumbnail —
+  remounts the frame and replays this.
+*/
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-lightbox-in {
+  animation: lightbox-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-ken-burns,
+  .animate-lightbox-in {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

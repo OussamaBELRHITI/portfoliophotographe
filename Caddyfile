@@ -1,0 +1,30 @@
+# Reverse proxy and automatic HTTPS. Used by the `caddy` container in docker-compose.yml;
+# {$DOMAIN} comes from .env. Caddy fetches and renews the certificate on its own — the only
+# requirement is that the domain's DNS already points at this server.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# The Spring API. Same origin as the site, so no CORS round-trips in the browser.
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# Everything else: the Next.js site and the /admin dashboard.
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "SAMEORIGIN"
+		-Server
+	}
+}
+
+# One canonical address: www redirects permanently to the bare domain.
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

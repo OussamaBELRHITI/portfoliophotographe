@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: portfolio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: photographer_portfolio
+      POSTGRES_USER: portfolio
+      POSTGRES_PASSWORD: portfolio
+    ports:
+      # Host port 5433, not 5432: this machine already runs a native PostgreSQL 18 service on
+      # 5432. Publishing there appears to work but the host resolves localhost:5432 to the
+      # native server, so the app silently talks to the wrong database.
+      - "5433:5432"
+    volumes:
+      - portfolio-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio -d photographer_portfolio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  portfolio-pgdata:

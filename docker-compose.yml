@@ -1,0 +1,115 @@
+# Production stack: Postgres + Spring API + Next.js site, with Caddy in front for HTTPS.
+#
+#   ./setup.sh                 # once: writes .env with generated secrets
+#   docker compose up -d --build
+#
+# Everything is served from ONE domain. Caddy sends /api/* to the backend and the rest to the
+# website, so the browser never makes a cross-origin call and there is a single certificate.
+#
+# (backend/docker-compose.yml is the local-development database only — not this file.)
+
+services:
+  # ─── database ───────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: photographer_portfolio
+      POSTGRES_USER: portfolio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./setup.sh first}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No `ports:` on purpose. Postgres is reachable only from the other containers; Docker
+    # publishes ports by writing its own firewall rules, which ufw does not override.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio -d photographer_portfolio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── API ────────────────────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    image: portfolio-backend:latest
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/photographer_portfolio
+      DB_USERNAME: portfolio
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?run ./setup.sh first}
+      # Read once, on the very first start, to create the admin account. Changing it later
+      # does not change the password of an account that already exists.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run ./setup.sh first}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      CORS_ALLOWED_ORIGINS: https://${DOMAIN:?run ./setup.sh first}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-portfolio}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Localhost only. Used when the server already runs its own Caddy (see DEPLOY.md);
+    # never reachable from the internet directly.
+    ports:
+      - "127.0.0.1:${API_PORT:-8180}:8080"
+    mem_limit: 768m
+    logging: *logging
+
+  # ─── website + dashboard ────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Compiled into the browser bundle — must be the public https address.
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}
+        NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
+    image: portfolio-web:latest
+    restart: unless-stopped
+    environment:
+      # Server-side rendering talks to the API over the internal Docker network.
+      API_URL: http://backend:8080
+      NEXT_PUBLIC_API_URL: https://${DOMAIN}
+      NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3100}:3000"
+    mem_limit: 512m
+    logging: *logging
+
+  # ─── HTTPS ──────────────────────────────────────────────────────────────────
+  # Obtains and renews Let's Encrypt certificates by itself. Switched on by the `caddy`
+  # profile (COMPOSE_PROFILES=caddy in .env). Leave the profile off when the server already
+  # has a Caddy or nginx listening on 80/443 — e.g. alongside another site — and add the
+  # block from DEPLOY.md to that proxy instead.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["caddy"]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - backend
+    logging: *logging
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

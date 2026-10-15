@@ -1,0 +1,22 @@
+# Keeps the build context small and secrets out of the image.
+node_modules
+.next
+out
+build
+tsconfig.tsbuildinfo
+
+# .env.local holds local values; production values arrive as build args / runtime env.
+.env
+.env.*
+
+.git
+.gitignore
+README.md
+AGENTS.md
+CLAUDE.md
+*.html
+.vscode
+.idea
+.claude
+Dockerfile
+.dockerignore

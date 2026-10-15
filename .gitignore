@@ -1,0 +1,28 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+said-admin-credentials.txt
+
+# Local backups
+*.tgz
+
+# Build output and dependencies
+node_modules/
+.next/
+target/
+*.tsbuildinfo
+next-env.d.ts
+
+# Old debug page dumps
+frontend/nf.html
+frontend/ok.html
+frontend/work_raw.html
+
+# Personal tooling
+.claude/
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
