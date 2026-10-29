@@ -25,7 +25,9 @@ export function Biography({ settings }: { settings: SiteSettings }) {
   const preview = paragraphs.slice(0, PREVIEW_PARAGRAPHS);
 
   return (
-    <section id="biography" className="border-t border-line">
+    // overflow-x-clip: the portrait's glow and offset frame reach past the column, and on a phone
+    // past the screen edge, which made the whole page scroll sideways.
+    <section id="biography" className="overflow-x-clip border-t border-line">
       <div className="mx-auto grid max-w-350 items-center gap-14 px-6 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-24 lg:px-12 lg:py-32">
         <Reveal className="order-2 lg:order-1">
           <p className="text-[11px] font-medium tracking-[0.3em] text-accent uppercase">

@@ -29,7 +29,7 @@ export function Hero({ media, settings }: { media: Media | null; settings: SiteS
   const isVideo = media?.type === "VIDEO";
 
   return (
-    <section className="relative flex h-svh min-h-140 w-full items-center justify-center overflow-hidden">
+    <section className="relative flex min-h-svh w-full items-center justify-center overflow-hidden">
       {media ? (
         isVideo ? (
           <video
@@ -67,11 +67,11 @@ export function Hero({ media, settings }: { media: Media | null; settings: SiteS
       <div className="absolute inset-0 bg-linear-to-b from-black/45 via-black/15 to-black/60" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0.18)_45%,rgba(0,0,0,0.5)_100%)]" />
 
-      <div className="relative z-10 px-6 text-center">
+      <div className="relative z-10 px-6 py-28 text-center">
         <p className="animate-fade-up text-xs tracking-[0.38em] text-accent uppercase [animation-delay:200ms] sm:text-sm sm:tracking-[0.42em]">
           {eyebrow}
         </p>
-        <h1 className="animate-fade-up mt-5 font-display text-6xl leading-[0.92] font-black tracking-[-0.015em] uppercase [animation-delay:350ms] sm:text-8xl lg:text-9xl">
+        <h1 className="animate-fade-up mt-5 font-display text-5xl leading-[0.92] font-black tracking-[-0.015em] [overflow-wrap:anywhere] uppercase sm:text-6xl [animation-delay:350ms] md:text-8xl lg:text-9xl">
           {siteName}
         </h1>
         <p className="animate-fade-up mx-auto mt-6 max-w-xl text-sm leading-relaxed text-fg-muted [animation-delay:500ms] sm:text-base">

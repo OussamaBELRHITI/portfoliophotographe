@@ -73,7 +73,7 @@ export function SiteHeader({
         <nav className="mx-auto flex max-w-400 items-center justify-between px-6 py-5 lg:px-12">
           <Link
             href="/"
-            className="font-display text-xl tracking-[0.2em] uppercase transition-colors hover:text-accent"
+            className="min-w-0 truncate font-display text-lg tracking-[0.16em] uppercase transition-colors hover:text-accent sm:text-xl sm:tracking-[0.2em]"
           >
             {siteName}
           </Link>
@@ -122,7 +122,7 @@ export function SiteHeader({
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
-            className="flex h-9 w-9 flex-col items-center justify-center gap-1.5 md:hidden"
+            className="flex h-9 w-9 shrink-0 flex-col items-center justify-center gap-1.5 md:hidden"
           >
             <span
               className={`h-px w-6 bg-fg transition-transform duration-300 ${
@@ -144,35 +144,39 @@ export function SiteHeader({
           menuOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
-        <div className="flex h-full flex-col justify-center gap-8 px-8">
-          {LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="font-display text-4xl tracking-wide text-fg transition-colors hover:text-accent"
-            >
-              {link.label}
-            </Link>
-          ))}
+        {/* Scrolls when the links and gallery list are taller than the screen (small phones,
+            landscape); min-h-full + justify-center keeps it centred when they are not. */}
+        <div className="h-full overflow-y-auto overscroll-contain">
+          <div className="flex min-h-full flex-col justify-center gap-6 px-8 py-24 sm:gap-8">
+            {LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="font-display text-3xl tracking-wide text-fg transition-colors hover:text-accent sm:text-4xl"
+              >
+                {link.label}
+              </Link>
+            ))}
 
-          {categories.length > 0 && (
-            <div className="mt-4 border-t border-line pt-6">
-              <p className="mb-4 text-[10px] uppercase tracking-[0.28em] text-fg-subtle">
-                Galleries
-              </p>
-              <div className="flex flex-col gap-3">
-                {categories.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/work/${c.slug}`}
-                    className="text-sm uppercase tracking-[0.18em] text-fg-muted transition-colors hover:text-accent"
-                  >
-                    {c.name}
-                  </Link>
-                ))}
+            {categories.length > 0 && (
+              <div className="mt-4 border-t border-line pt-6">
+                <p className="mb-4 text-[10px] uppercase tracking-[0.28em] text-fg-subtle">
+                  Galleries
+                </p>
+                <div className="flex flex-col gap-3">
+                  {categories.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/work/${c.slug}`}
+                      className="text-sm uppercase tracking-[0.18em] text-fg-muted transition-colors hover:text-accent"
+                    >
+                      {c.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </>

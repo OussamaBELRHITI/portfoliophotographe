@@ -33,6 +33,9 @@ html {
 }
 
 body {
+  /* Safety net: nothing decorative may make the page scroll sideways on a phone. `clip`, not
+     `hidden`, so it creates no scroll container and leaves sticky/fixed positioning alone. */
+  overflow-x: clip;
   background-color: var(--color-ink);
   color: var(--color-fg);
   -webkit-font-smoothing: antialiased;
