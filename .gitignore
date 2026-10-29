@@ -20,9 +20,13 @@ frontend/ok.html
 frontend/work_raw.html
 
 # Personal tooling
-.claude/
+.claude/*
+!.claude/skills/
 .idea/
 .vscode/
 *.iml
 .DS_Store
 Thumbs.db
+
+# Database dumps made by scripts/deploy.sh
+backups/

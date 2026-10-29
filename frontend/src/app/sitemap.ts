@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { publicApi } from "@/lib/api";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+import { SITE_URL } from "@/lib/site";
 
 /**
  * Generated from the live category list, so publishing a gallery adds it to the sitemap

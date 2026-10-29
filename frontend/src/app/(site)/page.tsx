@@ -30,15 +30,18 @@ export default async function HomePage() {
   const carouselCategories = categories.filter((c) => c.coverImageUrl);
   const useCarousel = carouselCategories.length > 1;
 
-  // Same first-three categories as the Work strip above — Film reuses the same taxonomy, so
-  // this stays in lockstep with it rather than picking a different subset.
-  const filmCategories = categories.slice(0, 3);
-  const filmVideosByCategory =
+  // The first three categories that actually have films, in the same order as the Work strip.
+  // A photo-only gallery would otherwise show up here as an empty "No films yet" card.
+  const videosByCategory =
     videos.length > 0
       ? await Promise.all(
-          filmCategories.map((c) => publicApi.categoryVideos(c.slug).catch(() => [] as Media[])),
+          categories.map((c) => publicApi.categoryVideos(c.slug).catch(() => [] as Media[])),
         )
       : [];
+  const film = categories
+    .map((category, i) => ({ category, videos: videosByCategory[i] ?? [] }))
+    .filter((f) => f.videos.length > 0)
+    .slice(0, 3);
 
   return (
     <>
@@ -86,7 +89,7 @@ export default async function HomePage() {
         )}
       </section>
 
-      {videos.length > 0 && (
+      {film.length > 0 && (
         <section className="border-t border-line bg-surface">
           <div className="mx-auto max-w-350 px-6 py-24 lg:px-12 lg:py-32">
             <Reveal className="mb-16">
@@ -97,13 +100,9 @@ export default async function HomePage() {
             </Reveal>
 
             <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-              {filmCategories.map((category, i) => (
+              {film.map(({ category, videos }, i) => (
                 <Reveal key={category.id} delay={(i % 3) * 90}>
-                  <FilmCategoryCard
-                    category={category}
-                    videos={filmVideosByCategory[i] ?? []}
-                    index={i}
-                  />
+                  <FilmCategoryCard category={category} videos={videos} index={i} />
                 </Reveal>
               ))}
             </div>

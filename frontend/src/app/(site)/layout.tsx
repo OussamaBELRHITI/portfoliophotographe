@@ -24,13 +24,21 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
 
   // Settled rather than all: a failure fetching categories shouldn't also cost us the site
   // name in the header. Each falls back independently.
-  const [categoriesResult, settingsResult] = await Promise.allSettled([
+  const [categoriesResult, settingsResult, videosResult] = await Promise.allSettled([
     publicApi.categories(),
     publicApi.settings(),
+    publicApi.videos(),
   ]);
 
   if (categoriesResult.status === "fulfilled") categories = categoriesResult.value;
   if (settingsResult.status === "fulfilled") settings = settingsResult.value;
+
+  // The Film menu lists only categories that have videos, so a photo-only gallery doesn't
+  // lead to an empty film page. If the videos call fails, fall back to every category.
+  const filmCategories =
+    videosResult.status === "fulfilled"
+      ? categories.filter((c) => videosResult.value.some((v) => v.categoryId === c.id))
+      : categories;
 
   return (
     <>
@@ -41,7 +49,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
         Skip to content
       </a>
       <StructuredData settings={settings} categories={categories} />
-      <SiteHeader categories={categories} settings={settings} />
+      <SiteHeader categories={categories} filmCategories={filmCategories} settings={settings} />
       <main id="main" className="flex-1">
         {children}
       </main>

@@ -70,16 +70,17 @@ services:
     build:
       context: ./frontend
       args:
-        # Compiled into the browser bundle — must be the public https address.
-        NEXT_PUBLIC_API_URL: https://${DOMAIN}
-        NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
+        # Empty on purpose: the browser calls /api/... on whatever address it loaded the site
+        # from, and Caddy routes it to the backend. Nothing address-specific is compiled in,
+        # so a new domain or server IP never needs a rebuild.
+        NEXT_PUBLIC_API_URL: ""
     image: portfolio-web:latest
     restart: unless-stopped
     environment:
       # Server-side rendering talks to the API over the internal Docker network.
       API_URL: http://backend:8080
-      NEXT_PUBLIC_API_URL: https://${DOMAIN}
-      NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
+      # Absolute links in the sitemap, robots.txt and share cards. Read at startup.
+      SITE_URL: https://${DOMAIN}
     depends_on:
       - backend
     ports:

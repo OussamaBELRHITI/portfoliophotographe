@@ -88,16 +88,24 @@ export const publicApi = {
   /**
    * Uncached category list, for build-time work only.
    *
-   * `generateStaticParams` and the sitemap must see the *current* data. With the normal cached
+   * The sitemap must see the *current* data. With the normal cached
    * fetch they read whatever is in `.next/cache`, which survives between builds — and on Vercel
    * survives between deployments — so a gallery deleted months ago can still be prerendered
-   * into a fresh production build. Runtime pages keep the 60s cache; only these two bypass it.
+   * into a fresh production build. Runtime pages keep the 60s cache; only the sitemap bypasses it.
    */
   categoriesFresh: () =>
     request<Category[]>("/api/public/categories", { cache: "no-store" }),
 
+  /**
+   * Uncached: this is what decides whether a gallery page exists. The fetch cache never stores
+   * an error response, so with `revalidate` a gallery that was deleted or hidden kept being
+   * served from its last 200 indefinitely — every background refresh got the 404 and dropped
+   * it. One small row lookup per gallery view is the price of the page disappearing at once.
+   */
   category: (slug: string) =>
-    request<Category>(`/api/public/categories/${encodeURIComponent(slug)}`, PUBLIC_CACHE),
+    request<Category>(`/api/public/categories/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+    }),
 
   categoryMedia: (slug: string) =>
     request<Media[]>(
@@ -113,9 +121,13 @@ export const publicApi = {
       PUBLIC_CACHE,
     ),
 
-  /** Hero media. Resolves to null when the API returns 204 (no media uploaded yet). */
+  /**
+   * Hero media. Resolves to null when the API returns 204 (no media uploaded yet).
+   * Uncached for the same reason as `category`: a 204 is never stored, so the last hero would
+   * otherwise outlive the deletion of every photo.
+   */
   hero: async (): Promise<Media | null> => {
-    const res = await fetch(`${base()}/api/public/hero`, PUBLIC_CACHE);
+    const res = await fetch(`${base()}/api/public/hero`, { cache: "no-store" });
     if (res.status === 204) return null;
     if (!res.ok) throw await toApiError(res);
     return (await res.json()) as Media;

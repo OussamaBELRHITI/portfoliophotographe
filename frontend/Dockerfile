@@ -15,13 +15,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # NEXT_PUBLIC_* values are compiled into the JavaScript the browser downloads, so they are
-# build arguments, not runtime variables. Change them and you must rebuild, not just restart.
-# Both must be the PUBLIC https address — never a container name, which only resolves
-# inside Docker.
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SITE_URL
+# build arguments, not runtime variables. Empty (the default) makes the browser call /api/...
+# on the site's own address, which is what the Caddy setup expects. Never a container name,
+# which only resolves inside Docker. The site's own address is SITE_URL, set at runtime.
+ARG NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build

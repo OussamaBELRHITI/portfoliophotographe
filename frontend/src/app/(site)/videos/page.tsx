@@ -26,6 +26,10 @@ export default async function VideosPage() {
   const videosByCategory = await Promise.all(
     categories.map((c) => publicApi.categoryVideos(c.slug).catch(() => [] as Media[])),
   );
+  // Photo-only galleries stay on Work; listing them here would only show empty cards.
+  const film = categories
+    .map((category, i) => ({ category, videos: videosByCategory[i] }))
+    .filter((f) => f.videos.length > 0);
 
   const bannerUrl = settings.videosBannerUrl;
 
@@ -47,11 +51,11 @@ export default async function VideosPage() {
           </Reveal>
         )}
 
-        {categories.length > 0 ? (
+        {film.length > 0 ? (
           <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category, i) => (
+            {film.map(({ category, videos }, i) => (
               <Reveal key={category.id} delay={(i % 3) * 90}>
-                <FilmCategoryCard category={category} videos={videosByCategory[i]} index={i} />
+                <FilmCategoryCard category={category} videos={videos} index={i} />
               </Reveal>
             ))}
           </div>
@@ -59,10 +63,10 @@ export default async function VideosPage() {
           <Reveal>
             <div className="border border-dashed border-line py-24 text-center">
               <p className="font-display text-2xl tracking-wide text-fg-muted">
-                No categories yet
+                No films yet
               </p>
               <p className="mx-auto mt-3 max-w-sm text-sm text-fg-subtle">
-                Film appears here once a category is published.
+                Film appears here once a video is added to a published category.
               </p>
             </div>
           </Reveal>

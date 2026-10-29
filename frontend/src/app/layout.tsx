@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { publicApi } from "@/lib/api";
 import { SETTINGS_FALLBACK } from "@/lib/types";
 import "./globals.css";
+import { SITE_URL } from "@/lib/site";
 
 // One plain, highly legible sans for everything — headings included. A decorative display
 // face was tried and read as fussy next to the photography.
@@ -11,8 +12,6 @@ const sans = Inter({
   subsets: ["latin"],
   display: "swap",
 });
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /**
  * Titles and descriptions come from the dashboard rather than being hardcoded, so renaming the

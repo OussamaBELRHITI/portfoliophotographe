@@ -1,7 +1,6 @@
 import type { Category, Media, SiteSettings } from "@/lib/types";
 import { SETTINGS_FALLBACK } from "@/lib/types";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+import { SITE_URL } from "@/lib/site";
 
 /**
  * JSON-LD structured data.

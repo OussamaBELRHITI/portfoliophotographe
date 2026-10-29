@@ -6,19 +6,6 @@ import { VideoGrid } from "@/components/site/VideoGrid";
 import { ApiError, publicApi } from "@/lib/api";
 import type { Category, Media } from "@/lib/types";
 
-/**
- * Pre-renders a page per visible category at build time, same as /work/[slug] — see that route
- * for why `categoriesFresh` (uncached) is used here instead of the normal cached fetch.
- */
-export async function generateStaticParams() {
-  try {
-    const categories = await publicApi.categoriesFresh();
-    return categories.map((c) => ({ slug: c.slug }));
-  } catch {
-    return [];
-  }
-}
-
 export async function generateMetadata({
   params,
 }: PageProps<"/videos/[slug]">): Promise<Metadata> {
@@ -30,8 +17,7 @@ export async function generateMetadata({
       description: category.description ?? `${category.name} films.`,
     };
   } catch {
-    // Same reasoning as /work/[slug]: generateStaticParams routes 200 rather than 404 on a
-    // miss, so this noindex directive is what keeps an unresolvable slug out of search results.
+    // Unknown or unpublished slug — the page answers 404; see /work/[slug].
     return {
       title: "Not found",
       robots: { index: false, follow: false },

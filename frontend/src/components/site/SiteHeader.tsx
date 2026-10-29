@@ -19,9 +19,12 @@ const LINKS = [
  */
 export function SiteHeader({
   categories,
+  filmCategories,
   settings,
 }: {
   categories: Category[];
+  /** The categories that have at least one video — the Film dropdown lists only these. */
+  filmCategories: Category[];
   settings: SiteSettings;
 }) {
   const siteName = settings.siteName ?? SETTINGS_FALLBACK.siteName;
@@ -81,16 +84,18 @@ export function SiteHeader({
 
               // "Work" and "Film" both get a dropdown of every category, so a visitor can jump
               // straight into a gallery — or a category's films — from anywhere on the site
-              // instead of landing on the index and scrolling to find it. Categories are shared
-              // between photos and videos, so both dropdowns list the same set.
-              if ((link.href === "/work" || link.href === "/videos") && categories.length > 0) {
+              // instead of landing on the index and scrolling to find it. Film lists only the
+              // categories that have videos, so no entry leads to an empty page.
+              const dropdown =
+                link.href === "/work" ? categories : link.href === "/videos" ? filmCategories : [];
+              if (dropdown.length > 0) {
                 return (
                   <CategoryDropdownNavItem
                     key={link.href}
                     href={link.href}
                     label={link.label}
                     active={active}
-                    categories={categories}
+                    categories={dropdown}
                   />
                 );
               }
@@ -175,8 +180,8 @@ export function SiteHeader({
 }
 
 /**
- * A nav item with a dropdown listing every category — used for both "Work" (photo galleries at
- * /work/{slug}) and "Film" (the same categories' videos at /videos/{slug}).
+ * A nav item with a dropdown listing categories — used for both "Work" (photo galleries at
+ * /work/{slug}) and "Film" (the categories with videos, at /videos/{slug}).
  *
  * Hover-driven via `group`/`focus-within` rather than JS-managed open state — no click handler,
  * no outside-click listener, nothing to get out of sync. Visibility toggles through opacity and

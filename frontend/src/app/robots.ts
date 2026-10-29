@@ -1,8 +1,11 @@
 import type { MetadataRoute } from "next";
+import { connection } from "next/server";
+import { SITE_URL } from "@/lib/site";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  // Per request rather than at build time, so the sitemap address follows SITE_URL.
+  await connection();
 
-export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",

@@ -19,6 +19,8 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 RUN addgroup -S spring && adduser -S spring -G spring
+# Owned by the app user so a fresh named volume mounted here inherits it and uploads can be written.
+RUN mkdir -p /data/media && chown spring:spring /data/media
 COPY --from=build --chown=spring:spring /app/app.jar app.jar
 USER spring
 
