@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { adminApi, ApiError, uploadToCloudinary } from "@/lib/api";
+import { adminApi, ApiError } from "@/lib/api";
+import { prepareImage, renameExtension } from "@/lib/upload";
 import { useAuth } from "@/lib/auth";
 import type { Media } from "@/lib/types";
 import { ImageIcon, TrashIcon, UploadIcon, XIcon } from "./icons";
@@ -11,9 +12,9 @@ import { Button, Spinner } from "./ui";
 /**
  * An image setting (portrait, page banner) the photographer can fill three ways: upload a new
  * file, pick one already in the media library, or paste a link. Replaces bare URL inputs that
- * asked him to copy Cloudinary links around by hand.
+ * asked him to copy file links around by hand.
  *
- * A file uploaded here goes to Cloudinary only — it is deliberately not registered as a media
+ * A file uploaded here is stored only — it is deliberately not registered as a media
  * item, so a portrait can never turn up inside a gallery or be picked as the home page hero.
  */
 export function ImageField({
@@ -43,9 +44,12 @@ export function ImageField({
     setUploadError(null);
     setProgress(0);
     try {
-      const sig = await adminApi.uploadSignature(token);
-      const result = await uploadToCloudinary(file, sig, setProgress);
-      onChange(result.secure_url);
+      // Resized and converted in the browser first: storage serves files exactly as sent, so
+      // a 12 MP export would otherwise be downloaded at full size behind a 300px preview.
+      const prepared = await prepareImage(file);
+      const name = prepared.original ? file.name : renameExtension(file.name, "webp");
+      const stored = await adminApi.uploadFile(token, prepared.display.blob, name, setProgress);
+      onChange(stored.url);
     } catch (err) {
       setUploadError(
         err instanceof ApiError || err instanceof Error ? err.message : "Upload failed",
@@ -109,7 +113,7 @@ export function ImageField({
             <input
               value={value ?? ""}
               onChange={(e) => onChange(e.target.value)}
-              placeholder="https://res.cloudinary.com/…"
+              placeholder="https://…"
               className="h-9 w-full rounded-lg border border-line bg-ink px-3 text-xs text-fg outline-none focus:border-accent"
             />
           ) : (

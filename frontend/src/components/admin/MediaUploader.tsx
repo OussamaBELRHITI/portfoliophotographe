@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { adminApi, ApiError, uploadToCloudinary } from "@/lib/api";
+import { adminApi, ApiError } from "@/lib/api";
+import { prepareImage, prepareVideo, renameExtension } from "@/lib/upload";
 import { useAuth } from "@/lib/auth";
 import type { Category } from "@/lib/types";
 import { UploadIcon } from "./icons";
@@ -10,17 +11,20 @@ import { Alert, Button, Card, Select } from "./ui";
 interface QueueItem {
   file: File;
   progress: number;
-  status: "pending" | "uploading" | "saving" | "done" | "error";
+  status: "pending" | "preparing" | "uploading" | "saving" | "done" | "error";
   error?: string;
 }
 
 /**
- * Implements the four browser-side steps of the upload flow:
+ * The browser side of the upload flow.
  *
- *   1. ask Spring for a signature   (server holds the Cloudinary secret)
- *   2. POST the file to Cloudinary  (bytes never touch our backend)
- *   3. take the URL + public ID back
- *   4. POST that metadata to Spring
+ *   1. prepare   — resize the photo (or read the video and grab a still frame)
+ *   2. upload    — send each produced file to the API, which streams it to disk
+ *   3. register  — record the finished set as one media row
+ *
+ * Step 1 is the part a media CDN used to do on every request. Doing it here means storage can
+ * stay a plain directory of files: the sizes a page needs already exist by the time anyone
+ * visits.
  *
  * Files upload one at a time rather than in parallel — a photographer dropping 40 raw exports
  * would otherwise open 40 concurrent connections and stall the whole batch.
@@ -68,45 +72,82 @@ export function MediaUploader({
       const item = queue[i];
       if (item.status === "done") continue;
 
-      // 1. signature from our backend. A failure here is not about this file — Cloudinary is
-      // unconfigured or the server is down — so it stops the batch with one clear message
-      // instead of marking every file in the queue as failed for the same reason.
-      let sig;
       try {
-        sig = await adminApi.uploadSignature(token);
-      } catch (err) {
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : "Could not reach the server to start the upload. Please try again.",
-        );
-        break;
-      }
+        patch(i, { status: "preparing", progress: 0 });
 
-      try {
-        patch(i, { status: "uploading", progress: 0 });
+        const isVideo = item.file.type.startsWith("video/");
 
-        // 2. straight to Cloudinary
-        const result = await uploadToCloudinary(item.file, sig, (p) =>
-          patch(i, { progress: p }),
-        );
+        if (isVideo) {
+          // Video is uploaded as-is — re-encoding one in a browser tab is not realistic — but
+          // its dimensions and a still frame are read here, since nothing downstream can.
+          const meta = await prepareVideo(item.file);
 
-        // 3 + 4. hand the metadata back to Spring
-        patch(i, { status: "saving", progress: 100 });
-        await adminApi.createMedia(token, {
-          title: item.file.name.replace(/\.[^.]+$/, ""),
-          url: result.secure_url,
-          publicId: result.public_id,
-          // Cloudinary reports what it actually stored, which beats trusting the extension.
-          type: result.resource_type === "video" ? "VIDEO" : "IMAGE",
-          width: result.width,
-          height: result.height,
-          format: result.format,
-          bytes: result.bytes,
-          durationSeconds: result.duration,
-          categoryId: categoryId === "" ? null : Number(categoryId),
-          visible: true,
-        });
+          patch(i, { status: "uploading", progress: 0 });
+          const stored = await adminApi.uploadFile(token, item.file, item.file.name, (p) =>
+            patch(i, { progress: p }),
+          );
+
+          let poster: { url: string; key: string } | null = null;
+          if (meta.poster) {
+            const up = await adminApi.uploadFile(
+              token,
+              meta.poster.blob,
+              renameExtension(item.file.name, "webp"),
+            );
+            poster = { url: up.url, key: up.key };
+          }
+
+          patch(i, { status: "saving", progress: 100 });
+          await adminApi.createMedia(token, {
+            title: item.file.name.replace(/\.[^.]+$/, ""),
+            url: stored.url,
+            storageKey: stored.key,
+            posterUrl: poster?.url ?? null,
+            posterStorageKey: poster?.key ?? null,
+            blurDataUrl: meta.blurDataUrl,
+            type: "VIDEO",
+            width: meta.width ?? undefined,
+            height: meta.height ?? undefined,
+            format: extensionOf(item.file.name),
+            bytes: stored.bytes,
+            durationSeconds: meta.durationSeconds ?? undefined,
+            categoryId: categoryId === "" ? null : Number(categoryId),
+            visible: true,
+          });
+        } else {
+          const prepared = await prepareImage(item.file);
+          const name = prepared.original
+            ? item.file.name
+            : renameExtension(item.file.name, "webp");
+
+          patch(i, { status: "uploading", progress: 0 });
+          const stored = await adminApi.uploadFile(token, prepared.display.blob, name, (p) =>
+            patch(i, { progress: p }),
+          );
+
+          let thumb: { url: string; key: string } | null = null;
+          if (prepared.thumbnail) {
+            const up = await adminApi.uploadFile(token, prepared.thumbnail.blob, name);
+            thumb = { url: up.url, key: up.key };
+          }
+
+          patch(i, { status: "saving", progress: 100 });
+          await adminApi.createMedia(token, {
+            title: item.file.name.replace(/\.[^.]+$/, ""),
+            url: stored.url,
+            storageKey: stored.key,
+            thumbnailUrl: thumb?.url ?? null,
+            thumbnailStorageKey: thumb?.key ?? null,
+            blurDataUrl: prepared.blurDataUrl,
+            type: "IMAGE",
+            width: prepared.display.width || undefined,
+            height: prepared.display.height || undefined,
+            format: prepared.original ? extensionOf(item.file.name) : "webp",
+            bytes: stored.bytes,
+            categoryId: categoryId === "" ? null : Number(categoryId),
+            visible: true,
+          });
+        }
 
         patch(i, { status: "done" });
       } catch (err) {
@@ -133,7 +174,7 @@ export function MediaUploader({
         <div>
           <h2 className="text-base font-semibold">Upload</h2>
           <p className="mt-0.5 text-sm text-fg-subtle">
-            Files go straight to Cloudinary — large videos are fine.
+Photos are resized before sending; large videos are fine.
           </p>
         </div>
         <div className="w-full sm:w-64">
@@ -259,8 +300,16 @@ export function MediaUploader({
 
 const STATUS_LABEL: Record<QueueItem["status"], (progress: number) => string> = {
   pending: () => "Ready",
+  // Resizing a large photo takes a visible moment, and silence there reads as a hang.
+  preparing: () => "Preparing…",
   uploading: (p) => `${p}%`,
   saving: () => "Saving…",
   done: () => "Uploaded",
   error: () => "Failed",
 };
+
+/** Lowercased file extension, used to record the stored format. */
+function extensionOf(filename: string): string | undefined {
+  const m = /\.([^.]+)$/.exec(filename);
+  return m ? m[1].toLowerCase() : undefined;
+}

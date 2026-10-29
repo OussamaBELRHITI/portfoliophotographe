@@ -1,11 +1,11 @@
 package com.portfolio.backend.controller;
 
-import com.portfolio.backend.dto.CloudinarySignatureResponse;
+import com.portfolio.backend.dto.StoredFile;
 import com.portfolio.backend.dto.MediaCreateRequest;
 import com.portfolio.backend.dto.MediaResponse;
 import com.portfolio.backend.dto.MediaUpdateRequest;
 import com.portfolio.backend.dto.ReorderRequest;
-import com.portfolio.backend.service.CloudinaryService;
+import com.portfolio.backend.service.StorageService;
 import com.portfolio.backend.service.MediaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +19,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
 
 /**
- * Media management, plus the endpoint that makes direct-to-Cloudinary uploads possible.
+ * Media management, plus the endpoint that makes direct-to-storage uploads possible.
  */
 @RestController
 @RequestMapping("/api/admin/media")
@@ -32,22 +33,27 @@ import java.util.List;
 public class AdminMediaController {
 
     private final MediaService mediaService;
-    private final CloudinaryService cloudinaryService;
+    private final StorageService storageService;
 
     /**
-     * Step 2 of the upload flow.
+     * Receives one file and writes it to disk.
      *
-     * <p>The dashboard calls this first, then POSTs the file straight to Cloudinary with the
-     * returned signature, then calls {@link #create} with whatever Cloudinary answered. The file
-     * bytes never touch this server, which is what keeps a 40 MB video upload from occupying a
-     * request thread and a chunk of heap.
+     * <p>Called once per file the browser produces — so a photo costs two calls (the display
+     * copy and the grid thumbnail) and a video costs two (the clip and its captured poster
+     * frame). Returning the key and URL rather than creating the row lets the dashboard gather
+     * every piece first and register the finished set in a single {@link #create}.
+     *
+     * <p>The bytes stream to disk; they are never held whole in memory.
      */
-    @PostMapping("/upload-signature")
-    public ResponseEntity<CloudinarySignatureResponse> uploadSignature() {
-        return ResponseEntity.ok(cloudinaryService.createUploadSignature());
+    @PostMapping("/upload")
+    public ResponseEntity<StoredFile> upload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String filename
+    ) {
+        return ResponseEntity.ok(storageService.store(file, filename));
     }
 
-    /** Step 5: persist the metadata Cloudinary returned. */
+    /** Records the metadata once the browser has finished uploading. */
     @PostMapping
     public ResponseEntity<MediaResponse> create(@Valid @RequestBody MediaCreateRequest request) {
         MediaResponse created = mediaService.create(request);
@@ -80,7 +86,7 @@ public class AdminMediaController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Removes the Cloudinary asset as well as the row — see MediaService.delete for the order. */
+    /** Removes the stored files as well as the row — see MediaService.delete for the order. */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         mediaService.delete(id);

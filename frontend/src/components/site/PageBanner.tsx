@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { blurProps, cloudinaryThumb } from "@/lib/format";
+
 
 /**
  * A shorter, still-image cousin of the homepage {@link Hero} — opens a listing page (Work,
@@ -26,12 +26,12 @@ export function PageBanner({
   return (
     <section className="relative flex h-[46vh] min-h-96 w-full items-center justify-center overflow-hidden">
       <Image
-        src={cloudinaryThumb(imageUrl, 2200)}
+        src={imageUrl}
         alt=""
         fill
         priority
         sizes="100vw"
-        {...blurProps(imageUrl)}
+        unoptimized
         className="object-cover"
       />
 

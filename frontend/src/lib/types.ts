@@ -23,7 +23,13 @@ export interface Media {
   title?: string | null;
   description?: string | null;
   url: string;
-  publicId: string;
+  /** Grid-sized copy. Null for video, and for images small enough not to need one. */
+  thumbnailUrl?: string | null;
+  /** A video's still frame, captured in the browser at upload. Null for images. */
+  posterUrl?: string | null;
+  /** Inline blur placeholder shown while the real file loads. */
+  blurDataUrl?: string | null;
+  storageKey: string;
   type: MediaType;
   width?: number | null;
   height?: number | null;
@@ -80,14 +86,6 @@ export interface LoginResponse {
   role: string;
 }
 
-export interface CloudinarySignature {
-  signature: string;
-  timestamp: number;
-  apiKey: string;
-  cloudName: string;
-  folder: string;
-  uploadUrl: string;
-}
 
 /** RFC 9457 ProblemDetail, as produced by GlobalExceptionHandler. */
 export interface ProblemDetail {

@@ -3,6 +3,7 @@ import { Biography } from "@/components/site/Biography";
 import { CategoryCard } from "@/components/site/CategoryCard";
 import { FilmCategoryCard } from "@/components/site/FilmCategoryCard";
 import { Hero } from "@/components/site/Hero";
+import { HeroCarousel } from "@/components/site/HeroCarousel";
 import { Reveal } from "@/components/site/Reveal";
 import { publicApi } from "@/lib/api";
 import type { Category, Media, SiteSettings } from "@/lib/types";
@@ -23,6 +24,12 @@ export default async function HomePage() {
 
   const featured = categories.slice(0, 3);
 
+  // The carousel needs photographs to cross-fade between. With one gallery there is nothing to
+  // page through, and with none there is nothing to show at all — both fall back to the static
+  // hero, which already handles an empty portfolio gracefully.
+  const carouselCategories = categories.filter((c) => c.coverImageUrl);
+  const useCarousel = carouselCategories.length > 1;
+
   // Same first-three categories as the Work strip above — Film reuses the same taxonomy, so
   // this stays in lockstep with it rather than picking a different subset.
   const filmCategories = categories.slice(0, 3);
@@ -35,7 +42,11 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero media={hero} settings={settings} />
+      {useCarousel ? (
+        <HeroCarousel categories={carouselCategories} settings={settings} />
+      ) : (
+        <Hero media={hero} settings={settings} />
+      )}
 
       <section id="work" className="mx-auto max-w-350 px-6 py-24 lg:px-12 lg:py-32">
         <Reveal className="mb-16">

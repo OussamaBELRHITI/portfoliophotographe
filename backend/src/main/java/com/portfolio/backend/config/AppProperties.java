@@ -20,7 +20,7 @@ import java.util.List;
 public record AppProperties(
         Cors cors,
         Jwt jwt,
-        Cloudinary cloudinary
+        Storage storage
 ) {
 
     public record Cors(List<String> allowedOrigins) {
@@ -34,20 +34,13 @@ public record AppProperties(
     }
 
     /**
-     * Cloudinary credentials. Only {@code cloudName} is ever safe to expose to the browser;
-     * the API secret exists solely to sign requests on this side.
+     * Where uploaded photos and videos are kept.
+     *
+     * <p>{@code directory} is a path inside this container, mounted as a Docker volume so the
+     * files outlive any rebuild. {@code publicBaseUrl} is the address the browser fetches them
+     * from — the reverse proxy serves that path straight off the same volume, so reads never
+     * reach this application.
      */
-    public record Cloudinary(
-            String cloudName,
-            String apiKey,
-            String apiSecret,
-            String uploadFolder
-    ) {
-        /** Uploads are rejected with a clear message rather than a confusing 500 when unset. */
-        public boolean isConfigured() {
-            return cloudName != null && !cloudName.isBlank()
-                    && apiKey != null && !apiKey.isBlank()
-                    && apiSecret != null && !apiSecret.isBlank();
-        }
+    public record Storage(String directory, String publicBaseUrl) {
     }
 }

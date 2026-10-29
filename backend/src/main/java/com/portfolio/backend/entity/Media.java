@@ -16,8 +16,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * One photo or video. The file itself lives in Cloudinary — this row stores only the pointer
- * to it plus the metadata the site needs to lay it out.
+ * One photo or video. The file itself lives in object storage — this row stores only the
+ * pointers to it plus the metadata the site needs to lay it out.
+ *
+ * <p>Two URLs for an image, not one: storage serves files exactly as uploaded, with no
+ * resize-on-request, so the browser makes both sizes at upload time and stores each. A gallery
+ * tile then fetches the small one instead of pulling a full-resolution frame to draw it 400px
+ * wide.
  */
 @Entity
 @Getter
@@ -26,8 +31,8 @@ import lombok.Setter;
 @Table(
         name = "media",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_media_cloudinary_public_id",
-                columnNames = "cloudinary_public_id"
+                name = "uk_media_storage_key",
+                columnNames = "storage_key"
         ),
         indexes = @Index(name = "idx_media_category", columnList = "category_id")
 )
@@ -39,17 +44,48 @@ public class Media extends BaseEntity {
     @Column(length = 1000)
     private String description;
 
-    /** Full delivery URL returned by Cloudinary. */
+    /** Full-size delivery URL — what the hero and the lightbox load. */
     @Column(nullable = false, length = 600)
-    private String cloudinaryUrl;
+    private String url;
 
     /**
-     * Cloudinary's own identifier for the asset. This is what we send back to Cloudinary to
-     * delete the file, and it is unique so a double-submitted upload cannot create two rows
-     * pointing at the same asset.
+     * Smaller copy for grid tiles. Null for video, and null for anything uploaded before the
+     * second size existed, so readers must fall back to {@link #url}.
      */
-    @Column(nullable = false, length = 300)
-    private String cloudinaryPublicId;
+    @Column(length = 600)
+    private String thumbnailUrl;
+
+    /**
+     * Still frame for a video, captured in the browser at upload. Storage cannot generate one
+     * on demand the way a media CDN does, so it is produced once and stored as its own object.
+     */
+    @Column(length = 600)
+    private String posterUrl;
+
+    /**
+     * A tiny blurred copy inlined as a data URI, shown while the real image loads.
+     *
+     * <p>Held in the row rather than as another stored object on purpose: it is a couple of
+     * kilobytes, and fetching it over the network would defeat the point of having a
+     * placeholder at all.
+     */
+    @Column(columnDefinition = "text")
+    private String blurDataUrl;
+
+    /**
+     * The object's path in the bucket. This is what deletes the file, and it is unique so a
+     * double-submitted upload cannot create two rows pointing at the same object.
+     */
+    @Column(name = "storage_key", nullable = false, length = 300)
+    private String storageKey;
+
+    /** The poster's own key, so deleting the video takes its still frame with it. */
+    @Column(length = 300)
+    private String posterStorageKey;
+
+    /** The thumbnail's key, deleted alongside the full-size image. */
+    @Column(length = 300)
+    private String thumbnailStorageKey;
 
     /**
      * {@code EnumType.STRING} stores "IMAGE"/"VIDEO" rather than 0/1. Ordinals are a trap:
@@ -60,7 +96,7 @@ public class Media extends BaseEntity {
     private MediaType type;
 
     /**
-     * Intrinsic dimensions, straight from the Cloudinary upload response. Next.js needs these
+     * Intrinsic dimensions, measured in the browser at upload. Next.js needs these
      * to reserve space for the image before it loads, which is what keeps a masonry gallery
      * from jumping around as it fills in.
      */
@@ -71,7 +107,7 @@ public class Media extends BaseEntity {
     @Column(length = 20)
     private String format;
 
-    /** File size in bytes, as reported by Cloudinary. */
+    /** Stored size in bytes, after the browser-side resize. */
     private Long bytes;
 
     /** Playback length for videos, in seconds. Null for images. */

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { blurProps, cloudinaryVideoPoster, formatDuration } from "@/lib/format";
+import { blurProps, formatDuration, posterUrl } from "@/lib/format";
 import { useLightbox } from "@/lib/useLightbox";
 import type { Media } from "@/lib/types";
 import { LightboxBackdrop, LightboxTopChrome, NavButton } from "./LightboxChrome";
@@ -12,6 +12,11 @@ import { LightboxBackdrop, LightboxTopChrome, NavButton } from "./LightboxChrome
  *
  * Deliberate: a grid of autoplaying videos would pull tens of megabytes on load. The poster is
  * a Cloudinary-generated still (`so_0`), so it costs one image until the visitor opts in.
+ *
+ * Tiles keep each film's own shape — portrait footage stays portrait. The tile is sized from
+ * the stored dimensions rather than forced to 16:9, so `object-cover` has nothing to crop: the
+ * box already matches the frame. CSS columns (same as the photo gallery) let the mixed heights
+ * pack without leaving a row-height gap under every short tile.
  */
 export function VideoGrid({ videos }: { videos: Media[] }) {
   const { openIndex, setOpenIndex, close, next, prev } = useLightbox(videos.length);
@@ -19,13 +24,16 @@ export function VideoGrid({ videos }: { videos: Media[] }) {
 
   return (
     <>
-      <div className="grid gap-1.5 md:grid-cols-2">
+      <div className="columns-1 gap-4 md:columns-2 *:mb-4">
         {videos.map((video, i) => (
           <button
             key={video.id}
             type="button"
             onClick={() => setOpenIndex(i)}
-            className="group relative block aspect-video w-full overflow-hidden rounded-lg bg-surface-raised"
+            className="group relative block w-full break-inside-avoid overflow-hidden rounded-lg bg-surface-raised"
+            // 16:9 rather than the helper's 3:2 default when dimensions are missing: an
+            // unmeasured file is far more likely to be widescreen than a photo-shaped crop.
+            style={{ aspectRatio: video.width && video.height ? video.width / video.height : 16 / 9 }}
             aria-label={`Play ${video.title ?? "video"}`}
           >
             <VideoPoster video={video} priority={i < 2} />
@@ -158,7 +166,10 @@ function VideoPoster({
   priority?: boolean;
   peek?: boolean;
 }) {
-  if (!video.url.includes("/upload/")) {
+  const poster = posterUrl(video);
+
+  // No captured frame — fall back to the browser rendering the clip's own first frame.
+  if (!poster) {
     return (
       <video
         src={video.url}
@@ -172,12 +183,13 @@ function VideoPoster({
 
   return (
     <Image
-      src={cloudinaryVideoPoster(video.url, peek ? 1600 : 1200)}
+      src={poster}
       alt={video.title ?? ""}
       fill
       sizes={peek ? "100vw" : "(max-width: 768px) 100vw, 50vw"}
       priority={priority}
-      {...blurProps(video.url, true)}
+      {...blurProps(video)}
+      unoptimized
       className={
         peek
           ? "object-cover"

@@ -1,6 +1,5 @@
 import type {
   Category,
-  CloudinarySignature,
   LoginResponse,
   Media,
   ProblemDetail,
@@ -219,11 +218,13 @@ export const adminApi = {
       auth(token),
     ),
 
-  uploadSignature: (token: string) =>
-    request<CloudinarySignature>(
-      "/api/admin/media/upload-signature",
-      auth(token, { method: "POST" }),
-    ),
+  /** Sends one prepared file to the server, which writes it to disk and returns its URL. */
+  uploadFile: (
+    token: string,
+    blob: Blob,
+    filename: string,
+    onProgress?: (percent: number) => void,
+  ) => uploadWithProgress(`${base()}/api/admin/media/upload`, token, blob, filename, onProgress),
 
   createMedia: (
     token: string,
@@ -231,7 +232,12 @@ export const adminApi = {
       title?: string;
       description?: string;
       url: string;
-      publicId: string;
+      storageKey: string;
+      thumbnailUrl?: string | null;
+      thumbnailStorageKey?: string | null;
+      posterUrl?: string | null;
+      posterStorageKey?: string | null;
+      blurDataUrl?: string | null;
       type: "IMAGE" | "VIDEO";
       width?: number;
       height?: number;
@@ -286,44 +292,40 @@ export const adminApi = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Cloudinary direct upload                                            */
+/* File upload                                                         */
 /* ------------------------------------------------------------------ */
 
-export interface CloudinaryUploadResult {
-  secure_url: string;
-  public_id: string;
-  width?: number;
-  height?: number;
-  format?: string;
-  bytes?: number;
-  duration?: number;
-  resource_type: string;
+/** Where a stored file landed — mirrors the backend's StoredFile record. */
+export interface StoredFile {
+  key: string;
+  url: string;
+  bytes: number;
 }
 
 /**
- * Step 3 of the upload flow: the file goes straight from the browser to Cloudinary, so it
- * never passes through the Spring server.
+ * POSTs one file to the API, which streams it to disk.
  *
- * The signed fields must match exactly what the backend hashed (folder + timestamp) — adding
- * or omitting one here makes Cloudinary reject the signature.
- *
- * Uses XMLHttpRequest rather than fetch purely because it reports upload progress.
+ * XMLHttpRequest rather than fetch purely because it reports upload progress — fetch still has
+ * no way to observe how much of a request body has been sent, and a photographer uploading a
+ * 300 MB video needs to see that something is happening.
  */
-export function uploadToCloudinary(
-  file: File,
-  sig: CloudinarySignature,
+function uploadWithProgress(
+  url: string,
+  token: string,
+  blob: Blob,
+  filename: string,
   onProgress?: (percent: number) => void,
-): Promise<CloudinaryUploadResult> {
+): Promise<StoredFile> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
-    form.append("file", file);
-    form.append("api_key", sig.apiKey);
-    form.append("timestamp", String(sig.timestamp));
-    form.append("signature", sig.signature);
-    form.append("folder", sig.folder);
+    form.append("file", blob, filename);
+    form.append("filename", filename);
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", sig.uploadUrl);
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    // Deliberately no Content-Type header: the browser must set it itself so that it can add
+    // the multipart boundary, which it cannot do if we overwrite the header.
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -333,19 +335,20 @@ export function uploadToCloudinary(
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText) as CloudinaryUploadResult);
-      } else {
-        let detail = xhr.responseText;
-        try {
-          detail = JSON.parse(xhr.responseText)?.error?.message ?? detail;
-        } catch {
-          /* keep raw text */
-        }
-        reject(new Error(`Cloudinary upload failed (${xhr.status}): ${detail}`));
+        resolve(JSON.parse(xhr.responseText) as StoredFile);
+        return;
       }
+      let detail = xhr.responseText;
+      try {
+        // The API answers with RFC 9457 ProblemDetail, so prefer its message over raw body text.
+        detail = JSON.parse(xhr.responseText)?.detail ?? detail;
+      } catch {
+        /* keep raw text */
+      }
+      reject(new ApiError(xhr.status, detail || `Upload failed (${xhr.status})`));
     };
 
-    xhr.onerror = () => reject(new Error("Network error during Cloudinary upload"));
+    xhr.onerror = () => reject(new Error("Network error during upload"));
     xhr.send(form);
   });
 }

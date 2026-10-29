@@ -70,6 +70,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
 
+                        // Uploaded photographs. Public by nature — this is a portfolio, and in
+                        // production the proxy serves them off disk without reaching Spring at
+                        // all; the rule matters for a deployment without a proxy in front.
+                        .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
+
                         .requestMatchers("/actuator/health").permitAll()
 
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

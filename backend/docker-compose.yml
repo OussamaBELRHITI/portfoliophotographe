@@ -1,3 +1,8 @@
+#  Local development dependency: Postgres.
+#  The API and the website run on the host (./mvnw spring-boot:run, npm run dev), and uploads
+#  are written to backend/data/media — no container needed for them.
+#  For the full production stack, see ../docker-compose.yml.
+
 services:
   postgres:
     image: postgres:16-alpine

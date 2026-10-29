@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { blurProps, cloudinaryVideoPoster } from "@/lib/format";
+import { blurProps, posterUrl } from "@/lib/format";
 import type { Category, Media } from "@/lib/types";
 
 /**
@@ -20,20 +20,21 @@ export function FilmCategoryCard({
   const cover = videos[0];
   // Same fallback as VideoGrid: a poster frame only exists for Cloudinary-hosted videos, so a
   // video from elsewhere renders its own first frame via <video> instead of next/image.
-  const hasCloudinaryPoster = cover?.url.includes("/upload/") ?? false;
+  const cover_poster = cover ? posterUrl(cover) : null;
 
   return (
     <Link href={`/videos/${category.slug}`} className="group block">
       <div className="relative aspect-3/2 overflow-hidden rounded-lg bg-surface-raised">
         {cover ? (
-          hasCloudinaryPoster ? (
+          cover_poster ? (
             <Image
-              src={cloudinaryVideoPoster(cover.url, 1000)}
+              src={cover_poster}
               alt={category.name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               priority={index < 3}
-              {...blurProps(cover.url, true)}
+              {...blurProps(cover)}
+              unoptimized
               className="object-cover transition-transform duration-900 ease-out group-hover:scale-[1.03]"
             />
           ) : (

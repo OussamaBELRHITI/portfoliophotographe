@@ -10,6 +10,17 @@
 		reverse_proxy backend:8080
 	}
 
+	# Uploaded photos and videos, served straight off the shared volume. Deliberately not
+	# proxied to the API: a gallery is almost entirely image requests, and there is no reason
+	# for each one to occupy a Java request thread.
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+		# Every stored name contains a UUID and its bytes never change, so there is nothing to
+		# revalidate — an edit uploads a new file under a new name.
+		header Cache-Control "public, max-age=31536000, immutable"
+	}
+
 	# Everything else: the Next.js site and the /admin dashboard.
 	handle {
 		reverse_proxy web:3000

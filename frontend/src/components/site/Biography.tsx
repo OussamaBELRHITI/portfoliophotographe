@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { blurProps, cloudinaryThumb, isCloudinary } from "@/lib/format";
 import type { SiteSettings } from "@/lib/types";
 import { SETTINGS_FALLBACK } from "@/lib/types";
 import { Reveal } from "./Reveal";
@@ -104,14 +103,13 @@ function Portrait({ url, name }: { url?: string | null; name: string }) {
       <div className="relative isolate aspect-4/5 overflow-hidden rounded-3xl bg-surface-raised shadow-[0_40px_100px_-24px_rgba(200,168,130,0.45),0_24px_50px_-12px_rgba(0,0,0,0.95)] ring-1 ring-white/10">
         {url ? (
           <Image
-            src={cloudinaryThumb(url, 1000)}
+            src={url}
             alt={`Portrait of ${name}`}
             fill
             sizes="(max-width: 1024px) 90vw, 45vw"
             // A pasted non-Cloudinary link would otherwise be rejected by next/image's host
             // allow-list and take the whole page down with it.
-            unoptimized={!isCloudinary(url)}
-            {...blurProps(url)}
+            unoptimized
             className="object-cover transition-transform duration-700 hover:scale-[1.03]"
           />
         ) : (

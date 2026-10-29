@@ -136,7 +136,7 @@ public class CategoryService {
     }
 
     /**
-     * Deleting a category leaves its media in place — the Cloudinary assets still exist and the
+     * Deleting a category leaves its media in place — the stored files still exist and the
      * photographer may want to re-file them. The rows are simply orphaned (category_id null).
      */
     @Transactional
@@ -199,7 +199,9 @@ public class CategoryService {
                     String cover = media.stream()
                             .filter(m -> m.getType() == MediaType.IMAGE)
                             .findFirst()
-                            .map(Media::getCloudinaryUrl)
+                            // Thumbnail where there is one: the index draws these small, and
+                            // a cover is the one image on that page guaranteed to be fetched.
+                            .map(m -> m.getThumbnailUrl() != null ? m.getThumbnailUrl() : m.getUrl())
                             .orElse(null);
                     return CategoryResponse.from(category, media.size(), cover);
                 })

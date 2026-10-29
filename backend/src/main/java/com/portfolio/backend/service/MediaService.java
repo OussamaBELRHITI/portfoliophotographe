@@ -29,7 +29,7 @@ public class MediaService {
 
     private final MediaRepository mediaRepository;
     private final CategoryService categoryService;
-    private final CloudinaryService cloudinaryService;
+    private final StorageService storageService;
 
     public List<MediaResponse> getByCategory(Long categoryId, boolean visibleOnly) {
         List<Media> media = visibleOnly
@@ -113,22 +113,27 @@ public class MediaService {
     }
 
     /**
-     * Step 5 of the upload flow: record an asset the browser has already pushed to Cloudinary.
+     * The last step of the upload flow: record a file the browser has already pushed to storage.
      */
     @Transactional
     public MediaResponse create(MediaCreateRequest request) {
-        // The unique constraint on cloudinary_public_id would catch this too, but checking here
+        // The unique constraint on storage_key would catch this too, but checking here
         // produces a clean 409 instead of a database constraint violation surfacing as a 500.
-        mediaRepository.findByCloudinaryPublicId(request.publicId()).ifPresent(existing -> {
+        mediaRepository.findByStorageKey(request.storageKey()).ifPresent(existing -> {
             throw new DuplicateResourceException(
-                    "Media with Cloudinary public ID '" + request.publicId() + "' already exists");
+                    "Media for stored object '" + request.storageKey() + "' already exists");
         });
 
         Media media = new Media();
         media.setTitle(request.title());
         media.setDescription(request.description());
-        media.setCloudinaryUrl(request.url());
-        media.setCloudinaryPublicId(request.publicId());
+        media.setUrl(request.url());
+        media.setStorageKey(request.storageKey());
+        media.setThumbnailUrl(request.thumbnailUrl());
+        media.setThumbnailStorageKey(request.thumbnailStorageKey());
+        media.setPosterUrl(request.posterUrl());
+        media.setPosterStorageKey(request.posterStorageKey());
+        media.setBlurDataUrl(request.blurDataUrl());
         media.setType(request.type());
         media.setWidth(request.width());
         media.setHeight(request.height());
@@ -147,8 +152,8 @@ public class MediaService {
         }
 
         Media saved = mediaRepository.save(media);
-        log.info("Registered {} media '{}' (publicId={})",
-                saved.getType(), saved.getTitle(), saved.getCloudinaryPublicId());
+        log.info("Registered {} media '{}' (key={})",
+                saved.getType(), saved.getTitle(), saved.getStorageKey());
         return MediaResponse.from(saved, categoryId);
     }
 
@@ -183,18 +188,33 @@ public class MediaService {
     }
 
     /**
-     * Deletes the row and the Cloudinary asset behind it.
+     * Deletes the row and every stored object behind it — the file, its thumbnail, its poster.
      *
-     * <p>Order matters. Cloudinary goes first: if that call fails we abort and keep the row, so
-     * the admin can retry. Deleting the row first and then failing would strand the file in
-     * Cloudinary with nothing left pointing at it — an invisible, unbillable-to-anyone orphan.
+     * <p>Order matters. Storage goes first: if that call fails we abort and keep the row, so the
+     * admin can retry. Deleting the row first and then failing would strand the file in the
+     * bucket with nothing left pointing at it — invisible, and still taking up disk.
      */
     @Transactional
     public void delete(Long id) {
         Media media = getEntityById(id);
-        cloudinaryService.deleteAsset(media.getCloudinaryPublicId(), media.getType());
+
+        storageService.delete(media.getStorageKey());
+        // Derived copies are best-effort: the original is already gone, and refusing to delete
+        // the row now would leave the admin unable to retry anything but the part that worked.
+        deleteQuietly(media.getThumbnailStorageKey());
+        deleteQuietly(media.getPosterStorageKey());
+
         mediaRepository.delete(media);
-        log.info("Deleted media {} (publicId={})", id, media.getCloudinaryPublicId());
+        log.info("Deleted media {} (key={})", id, media.getStorageKey());
+    }
+
+    private void deleteQuietly(String key) {
+        if (key == null || key.isBlank()) return;
+        try {
+            storageService.delete(key);
+        } catch (RuntimeException ex) {
+            log.warn("Could not delete derived object '{}': {}", key, ex.getMessage());
+        }
     }
 
     /** Applies a drag-and-drop reorder within one gallery. */

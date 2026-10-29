@@ -1,3 +1,5 @@
+import type { Media } from "./types";
+
 /** Shared formatting helpers. */
 
 export function formatDate(iso: string): string {
@@ -23,63 +25,41 @@ export function formatDuration(seconds?: number | null): string {
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
-/** True for URLs next/image is allowed to optimise (see remotePatterns in next.config.ts). */
-export function isCloudinary(url: string): boolean {
-  return url.startsWith("https://res.cloudinary.com/");
-}
-
 /**
- * Cloudinary transformations are injected into the delivery URL after `/upload/`.
- * `f_auto,q_auto` lets Cloudinary pick a modern format and sensible quality per browser,
- * and `w_` caps the pixels actually sent — a 4000px original has no business loading
- * behind a 600px thumbnail.
- */
-export function cloudinaryThumb(url: string, width = 800): string {
-  return url.includes("/upload/")
-    ? url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`)
-    : url;
-}
-
-/** Still frame from a video, for use as a poster image. */
-export function cloudinaryVideoPoster(url: string, width = 1200): string {
-  if (!url.includes("/upload/")) return url;
-  return url
-    .replace("/upload/", `/upload/so_0,f_auto,q_auto,w_${width}/`)
-    .replace(/\.(mp4|mov|webm|avi|mkv)$/i, ".jpg");
-}
-
-/**
- * A tiny, heavily blurred version of the image — a "LQIP".
+ * The URL to show for a media item, at the size the context actually needs.
  *
- * <p>Fed to next/image as `blurDataURL`, it renders instantly under the real photo so a gallery
- * fades in from a soft colour impression instead of flashing empty grey boxes. At 24px wide
- * with e_blur the file is a couple of kilobytes.
- *
- * Cloudinary generates it from the same source, so there is nothing to precompute or store.
+ * Storage returns files exactly as uploaded — there is no resize-on-request — so these pick
+ * between copies the browser made at upload time rather than building a transformation URL.
+ * Every accessor falls back to the full-size file, which keeps items uploaded before a given
+ * copy existed working instead of rendering a broken image.
  */
-export function cloudinaryBlurUrl(url: string): string {
-  return url.includes("/upload/")
-    ? url.replace("/upload/", "/upload/w_24,e_blur:400,q_auto:low,f_auto/")
-    : url;
+
+/** Grid tiles and other small placements. */
+export function thumbUrl(media: Pick<Media, "url" | "thumbnailUrl">): string {
+  return media.thumbnailUrl ?? media.url;
 }
 
-/** Blur placeholder for a video's poster frame. */
-export function cloudinaryVideoBlurUrl(url: string): string {
-  if (!url.includes("/upload/")) return url;
-  return url
-    .replace("/upload/", "/upload/so_0,w_24,e_blur:400,q_auto:low,f_auto/")
-    .replace(/\.(mp4|mov|webm|avi|mkv)$/i, ".jpg");
+/** Full-screen placements: the hero and the lightbox. */
+export function displayUrl(media: Pick<Media, "url">): string {
+  return media.url;
+}
+
+/** A video's still frame. Null when the browser could not capture one at upload. */
+export function posterUrl(media: Pick<Media, "type" | "posterUrl">): string | null {
+  return media.type === "VIDEO" ? (media.posterUrl ?? null) : null;
 }
 
 /**
  * next/image needs `placeholder="blur"` AND a `blurDataURL` together, so this bundles them.
  * Spread onto an <Image> to opt a photo into blur-up loading.
+ *
+ * The placeholder is a data URI stored on the row, so it costs no request. Items without one
+ * get no blur rather than a broken attribute — next/image rejects an empty blurDataURL.
  */
-export function blurProps(url: string, isVideo = false) {
-  return {
-    placeholder: "blur" as const,
-    blurDataURL: isVideo ? cloudinaryVideoBlurUrl(url) : cloudinaryBlurUrl(url),
-  };
+export function blurProps(media: Pick<Media, "blurDataUrl">) {
+  return media.blurDataUrl
+    ? { placeholder: "blur" as const, blurDataURL: media.blurDataUrl }
+    : {};
 }
 
 /** Aspect ratio as a CSS-friendly number, defaulting to 3:2 when dimensions are unknown. */

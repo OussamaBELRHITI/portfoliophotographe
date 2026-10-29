@@ -32,8 +32,8 @@ public interface MediaRepository extends JpaRepository<Media, Long> {
 
     List<Media> findByCategoryIdInAndVisibleTrueOrderByDisplayOrderAsc(Collection<Long> categoryIds);
 
-    /** Used when a Cloudinary delete comes back, to find the row that owns that asset. */
-    Optional<Media> findByCloudinaryPublicId(String cloudinaryPublicId);
+    /** Guards against a double-submitted upload creating two rows for the same object. */
+    Optional<Media> findByStorageKey(String storageKey);
 
     /** Next free slot when appending to a gallery, so new uploads land at the end. */
     Optional<Media> findFirstByCategoryIdOrderByDisplayOrderDesc(Long categoryId);

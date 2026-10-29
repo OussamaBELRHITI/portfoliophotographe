@@ -13,17 +13,10 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
   images: {
-    // next/image refuses remote hosts unless they're allow-listed, which is what keeps the
-    // optimizer from being used as an open proxy for arbitrary URLs.
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        pathname: "/**",
-      },
-    ],
-    // Cloudinary already serves AVIF/WebP via f_auto, but this covers images requested
-    // without a transformation.
+    // No remotePatterns and no optimizer: uploaded files are already correctly-sized WebP,
+    // produced in the browser before upload, and they are served from this same origin. Every
+    // <Image> rendering one passes `unoptimized`, so Next has no host to allow-list and does
+    // not re-encode a file that is already in its final form.
     formats: ["image/avif", "image/webp"],
   },
 };

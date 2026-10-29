@@ -42,10 +42,12 @@ spring:
 
   servlet:
     multipart:
-      # Files go browser -> Cloudinary directly, never through this server. Kept small so a
-      # stray large upload aimed at the API fails fast instead of buffering.
-      max-file-size: 2MB
-      max-request-size: 2MB
+      # Uploads now pass through this server on their way to disk, so these have to admit a
+      # real video. Spring streams anything over file-size-threshold straight to a temp file,
+      # so a large upload costs disk and one request thread, not heap.
+      max-file-size: ${MAX_UPLOAD_SIZE:512MB}
+      max-request-size: ${MAX_UPLOAD_SIZE:512MB}
+      file-size-threshold: 1MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -81,10 +83,10 @@ app:
     expiration-ms: ${JWT_EXPIRATION_MS:43200000}
     issuer: photographer-portfolio
 
-  cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-    api-key: ${CLOUDINARY_API_KEY:}
-    # Never reaches the browser. The backend uses it only to sign upload requests and to
-    # authenticate deletes.
-    api-secret: ${CLOUDINARY_API_SECRET:}
-    upload-folder: ${CLOUDINARY_UPLOAD_FOLDER:portfolio}
+  storage:
+    # Where uploaded photos and videos are written. A Docker volume is mounted here, so the
+    # files survive rebuilds; the reverse proxy serves the same directory directly.
+    directory: ${STORAGE_DIR:./data/media}
+    # The address the browser fetches them from. Relative in development, where Next.js and the
+    # API share localhost; the full https origin in production.
+    public-base-url: ${STORAGE_PUBLIC_URL:http://localhost:8080/media}

@@ -10,7 +10,13 @@ public record MediaResponse(
         String title,
         String description,
         String url,
-        String publicId,
+        /** Grid-sized copy; null for video and for anything uploaded before it existed. */
+        String thumbnailUrl,
+        /** A video's still frame; null for images. */
+        String posterUrl,
+        /** Inline blur placeholder, shown while the real file loads. */
+        String blurDataUrl,
+        String storageKey,
         MediaType type,
         Integer width,
         Integer height,
@@ -33,8 +39,11 @@ public record MediaResponse(
                 media.getId(),
                 media.getTitle(),
                 media.getDescription(),
-                media.getCloudinaryUrl(),
-                media.getCloudinaryPublicId(),
+                media.getUrl(),
+                media.getThumbnailUrl(),
+                media.getPosterUrl(),
+                media.getBlurDataUrl(),
+                media.getStorageKey(),
                 media.getType(),
                 media.getWidth(),
                 media.getHeight(),

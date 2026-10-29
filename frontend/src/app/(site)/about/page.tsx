@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/site/Reveal";
 import { publicApi } from "@/lib/api";
-import { blurProps, cloudinaryThumb, isCloudinary } from "@/lib/format";
 import type { SiteSettings } from "@/lib/types";
 import { SETTINGS_FALLBACK } from "@/lib/types";
 
@@ -53,13 +52,12 @@ export default async function AboutPage() {
           <Reveal>
             <div className="relative aspect-4/5 overflow-hidden bg-surface-raised">
               <Image
-                src={cloudinaryThumb(portrait, 900)}
+                src={portrait}
                 alt={settings.siteName ?? "Portrait"}
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 40vw"
-                unoptimized={!isCloudinary(portrait)}
-                {...blurProps(portrait)}
+                unoptimized
                 className="object-cover"
               />
             </div>

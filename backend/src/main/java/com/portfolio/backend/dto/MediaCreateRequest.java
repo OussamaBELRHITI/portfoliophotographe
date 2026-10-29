@@ -6,11 +6,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Step 5 of the upload flow: the browser has finished uploading straight to Cloudinary and is
- * now telling us where the file landed.
+ * The last step of the upload flow: the browser has finished pushing the file straight to
+ * storage and is now recording where it landed.
  *
- * <p>The dimensions and format come from Cloudinary's upload response rather than being
- * inferred here — the backend never sees the bytes.
+ * <p>Dimensions, format and the derived copies are all measured or produced in the browser —
+ * the backend never sees the bytes, so it has nothing to inspect them with.
  */
 public record MediaCreateRequest(
         @Size(max = 200)
@@ -19,13 +19,24 @@ public record MediaCreateRequest(
         @Size(max = 1000)
         String description,
 
-        @NotBlank(message = "Cloudinary URL is required")
+        @NotBlank(message = "A file URL is required")
         @Size(max = 600)
         String url,
 
-        @NotBlank(message = "Cloudinary public ID is required")
+        @NotBlank(message = "A storage key is required")
         @Size(max = 300)
-        String publicId,
+        String storageKey,
+
+        /** Grid-sized copy of an image. Absent for video. */
+        @Size(max = 600) String thumbnailUrl,
+        @Size(max = 300) String thumbnailStorageKey,
+
+        /** Still frame for a video, captured in the browser. Absent for images. */
+        @Size(max = 600) String posterUrl,
+        @Size(max = 300) String posterStorageKey,
+
+        /** Inlined data URI, a couple of kilobytes, shown while the real file loads. */
+        String blurDataUrl,
 
         @NotNull(message = "Media type is required")
         MediaType type,

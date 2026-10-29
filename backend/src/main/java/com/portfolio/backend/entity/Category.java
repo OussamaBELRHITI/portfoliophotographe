@@ -60,7 +60,7 @@ public class Category extends BaseEntity {
      * the helper methods below keep both sides in sync.
      *
      * <p>{@code orphanRemoval = false} is intentional: detaching a photo from a category should
-     * not delete the photo, because the Cloudinary asset still exists and may be re-filed.
+     * not delete the photo, because the stored file still exists and may be re-filed.
      */
     @OneToMany(mappedBy = "category", cascade = CascadeType.PERSIST, orphanRemoval = false)
     @OrderBy("displayOrder ASC, id ASC")

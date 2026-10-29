@@ -3,7 +3,7 @@ package com.portfolio.backend.dto;
 import jakarta.validation.constraints.Size;
 
 /**
- * Edits to an existing media item's metadata. The Cloudinary URL and public ID are absent on
+ * Edits to an existing media item's metadata. The file URL and storage key are absent on
  * purpose — repointing a row at a different asset is not an edit, it is a new upload.
  *
  * <p>Every field is nullable and treated as "leave unchanged", which makes this a PATCH-style

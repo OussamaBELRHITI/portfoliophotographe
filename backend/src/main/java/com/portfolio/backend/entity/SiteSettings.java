@@ -46,14 +46,14 @@ public class SiteSettings extends BaseEntity {
     @Column(columnDefinition = "text")
     private String aboutBody;
 
-    /** Cloudinary URL of a portrait for the about page. */
+    /** Stored URL of a portrait for the about page. */
     @Column(length = 600)
     private String aboutPortraitUrl;
 
     /* ---- page banners ---- */
 
     /**
-     * Cloudinary URL shown as a short image band above the gallery grid on /work.
+     * Stored URL shown as a short image band above the gallery grid on /work.
      *
      * <p>Deliberately separate from the home page's featured hero: reusing that image would
      * put the same photo full-screen on the very first page a visitor lands on, then again

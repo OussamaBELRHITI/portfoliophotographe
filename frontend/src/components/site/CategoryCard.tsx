@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { blurProps, cloudinaryThumb } from "@/lib/format";
+
 import type { Category } from "@/lib/types";
 
 /**
@@ -21,12 +21,14 @@ export function CategoryCard({ category, index = 0 }: { category: Category; inde
       <div className="relative aspect-3/2 overflow-hidden rounded-lg bg-surface-raised">
         {category.coverImageUrl ? (
           <Image
-            src={cloudinaryThumb(category.coverImageUrl, 1000)}
+            src={category.coverImageUrl}
             alt={category.name}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            // Already a right-sized WebP made at upload; Next's optimizer would re-encode it
+            // for no gain, and this way no host allow-list is needed either.
+            unoptimized
             priority={index < 3}
-            {...blurProps(category.coverImageUrl)}
             className="object-cover transition-transform duration-900 ease-out group-hover:scale-[1.03]"
           />
         ) : (

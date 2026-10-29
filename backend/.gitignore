@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Uploaded photos and videos (development). Production keeps these in a Docker volume.
+data/

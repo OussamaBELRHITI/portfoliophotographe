@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { blurProps, cloudinaryThumb, cloudinaryVideoPoster } from "@/lib/format";
+import { blurProps, displayUrl, posterUrl } from "@/lib/format";
 import type { Media, SiteSettings } from "@/lib/types";
 import { SETTINGS_FALLBACK } from "@/lib/types";
 
@@ -12,6 +12,15 @@ import { SETTINGS_FALLBACK } from "@/lib/types";
  * flat. With no media at all it falls back to a purely typographic hero, which still looks
  * deliberate on a brand-new site.
  */
+/**
+ * The call-to-action pill, shared by both hero buttons and matching the Contact page's
+ * "Send an email" button — one CTA shape across the site rather than a different treatment per
+ * page. The glow is a wide, soft, accent-tinted shadow; a tighter one would read as a raised
+ * edge rather than light coming off the button.
+ */
+const CTA_CLASS =
+  "rounded-full bg-accent px-9 py-3.5 text-[11px] font-semibold tracking-[0.22em] text-ink uppercase shadow-[0_12px_40px_-12px_rgba(200,168,130,0.6)] transition-all duration-300 hover:bg-accent-bright hover:shadow-[0_16px_50px_-12px_rgba(200,168,130,0.8)]";
+
 export function Hero({ media, settings }: { media: Media | null; settings: SiteSettings }) {
   const siteName = settings.siteName ?? SETTINGS_FALLBACK.siteName;
   const eyebrow = settings.heroEyebrow ?? SETTINGS_FALLBACK.heroEyebrow;
@@ -26,7 +35,7 @@ export function Hero({ media, settings }: { media: Media | null; settings: SiteS
           <video
             // A poster frame shows immediately while the video buffers, so the hero is never
             // an empty black rectangle on a slow connection.
-            poster={cloudinaryVideoPoster(media.url, 1920)}
+            poster={posterUrl(media) ?? undefined}
             src={media.url}
             autoPlay
             muted
@@ -36,12 +45,13 @@ export function Hero({ media, settings }: { media: Media | null; settings: SiteS
           />
         ) : (
           <Image
-            src={cloudinaryThumb(media.url, 2400)}
+            src={displayUrl(media)}
             alt=""
             fill
             priority
             sizes="100vw"
-            {...blurProps(media.url)}
+            {...blurProps(media)}
+            unoptimized
             className="animate-ken-burns object-cover"
           />
         )
@@ -58,10 +68,10 @@ export function Hero({ media, settings }: { media: Media | null; settings: SiteS
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0.18)_45%,rgba(0,0,0,0.5)_100%)]" />
 
       <div className="relative z-10 px-6 text-center">
-        <p className="animate-fade-up text-[10px] tracking-[0.4em] text-accent uppercase [animation-delay:200ms]">
+        <p className="animate-fade-up text-xs tracking-[0.38em] text-accent uppercase [animation-delay:200ms] sm:text-sm sm:tracking-[0.42em]">
           {eyebrow}
         </p>
-        <h1 className="animate-fade-up mt-6 font-display text-5xl leading-[1.05] font-light tracking-[0.06em] uppercase [animation-delay:350ms] sm:text-7xl lg:text-8xl">
+        <h1 className="animate-fade-up mt-5 font-display text-6xl leading-[0.92] font-black tracking-[-0.015em] uppercase [animation-delay:350ms] sm:text-8xl lg:text-9xl">
           {siteName}
         </h1>
         <p className="animate-fade-up mx-auto mt-6 max-w-xl text-sm leading-relaxed text-fg-muted [animation-delay:500ms] sm:text-base">
@@ -71,13 +81,13 @@ export function Hero({ media, settings }: { media: Media | null; settings: SiteS
         <div className="animate-fade-up mt-12 flex flex-col items-center justify-center gap-4 [animation-delay:650ms] sm:flex-row">
           <Link
             href="#work"
-            className="border border-fg/50 px-9 py-3.5 text-[11px] font-medium tracking-[0.24em] text-fg uppercase transition-all duration-300 hover:border-accent hover:bg-accent hover:text-ink"
+            className={CTA_CLASS}
           >
             View Photos
           </Link>
           <Link
             href="/contact"
-            className="border border-fg/25 px-9 py-3.5 text-[11px] font-medium tracking-[0.24em] text-fg/90 uppercase transition-all duration-300 hover:border-accent hover:text-accent-bright"
+            className={CTA_CLASS}
           >
             Get in Touch
           </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { blurProps, cloudinaryThumb } from "@/lib/format";
+import { blurProps, displayUrl, thumbUrl } from "@/lib/format";
 import { useLightbox } from "@/lib/useLightbox";
 import type { Media } from "@/lib/types";
 import { LightboxBackdrop, LightboxTopChrome, NavButton } from "./LightboxChrome";
@@ -30,13 +30,14 @@ export function GalleryGrid({ media }: { media: Media[] }) {
             aria-label={item.title ?? `Open image ${i + 1}`}
           >
             <Image
-              src={cloudinaryThumb(item.url, 900)}
+              src={thumbUrl(item)}
               alt={item.title ?? ""}
               width={item.width ?? 1200}
               height={item.height ?? 800}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               priority={i < 4}
-              {...blurProps(item.url)}
+              {...blurProps(item)}
+              unoptimized
               className="h-auto w-full object-cover transition-transform duration-900 ease-out group-hover:scale-[1.03]"
             />
             <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/20" />
@@ -84,7 +85,7 @@ export function GalleryGrid({ media }: { media: Media[] }) {
                 className="absolute left-[4%] hidden h-[50vh] w-[26vw] cursor-pointer overflow-hidden rounded-sm opacity-40 saturate-50 blur-[1.5px] transition-all duration-500 hover:opacity-65 sm:block"
               >
                 <Image
-                  src={cloudinaryThumb(media[(openIndex - 1 + media.length) % media.length].url, 1600)}
+                  src={displayUrl(media[(openIndex - 1 + media.length) % media.length])}
                   alt=""
                   fill
                   // Deliberately the same hint as the centre image below, not the peek's actual
@@ -92,6 +93,7 @@ export function GalleryGrid({ media }: { media: Media[] }) {
                   // cached variant when this photo gets promoted to the centre, instead of
                   // fetching it a second time at a different width.
                   sizes="100vw"
+                  unoptimized
                   className="object-cover"
                 />
               </button>
@@ -109,12 +111,13 @@ export function GalleryGrid({ media }: { media: Media[] }) {
               onClick={(e) => e.stopPropagation()}
             >
               <Image
-                src={cloudinaryThumb(active.url, 1600)}
+                src={displayUrl(active)}
                 alt={active.title ?? ""}
                 width={active.width ?? 1600}
                 height={active.height ?? 1067}
                 sizes="100vw"
-                {...blurProps(active.url)}
+                {...blurProps(active)}
+                unoptimized
                 className="max-h-[72vh] w-auto rounded-sm border border-accent/40 object-contain shadow-[0_30px_90px_-20px_rgba(0,0,0,0.95)]"
               />
               {(active.title || active.description) && (
@@ -142,10 +145,11 @@ export function GalleryGrid({ media }: { media: Media[] }) {
                 className="absolute right-[4%] hidden h-[50vh] w-[26vw] cursor-pointer overflow-hidden rounded-sm opacity-40 saturate-50 blur-[1.5px] transition-all duration-500 hover:opacity-65 sm:block"
               >
                 <Image
-                  src={cloudinaryThumb(media[(openIndex + 1) % media.length].url, 1600)}
+                  src={displayUrl(media[(openIndex + 1) % media.length])}
                   alt=""
                   fill
                   sizes="100vw"
+                  unoptimized
                   className="object-cover"
                 />
               </button>

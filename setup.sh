@@ -45,13 +45,6 @@ if command -v ss >/dev/null && ss -ltn 2>/dev/null | grep -qE '[:.]443\s'; then
   HOST_PROXY=true
 fi
 
-# ─── Cloudinary ──────────────────────────────────────────────────────────────
-echo
-echo "Cloudinary keys (cloudinary.com → Settings → API Keys). Leave blank to add later in .env."
-read -rp "  Cloud name: " CLOUD_NAME
-read -rp "  API key:    " CLOUD_KEY
-read -rsp "  API secret: " CLOUD_SECRET; echo
-
 # ─── secrets ─────────────────────────────────────────────────────────────────
 # Never "admin": a guessable username is half of a guessed login.
 if [ -z "${ADMIN_USERNAME:-}" ]; then
@@ -81,10 +74,7 @@ ADMIN_USERNAME=$ADMIN_USERNAME
 ADMIN_PASSWORD='$ADMIN_PASSWORD'
 ADMIN_EMAIL=
 
-CLOUDINARY_CLOUD_NAME=$CLOUD_NAME
-CLOUDINARY_API_KEY=$CLOUD_KEY
-CLOUDINARY_API_SECRET=$CLOUD_SECRET
-CLOUDINARY_UPLOAD_FOLDER=portfolio
+MAX_UPLOAD_SIZE=512MB
 EOF
 chmod 600 .env
 
